@@ -14,12 +14,12 @@ Router.post('/', (req, res) => {
         insertRecord(req, res);
     }
     else{
-        updateRecord(req,res);
+        updateRecord(req, res);
     }
 });
 
 function insertRecord(req, res){
-    let product = new Product();
+    var product = new Product();
 
     product.productid = req.body.productid,
     product.productname = req.body.productname,
@@ -43,7 +43,7 @@ if(product.productid == "" || product.productname == "" || product.categoryid ==
             res.redirect('product/list');
         }      
         else {
-            console.log('Error Occured');
+            console.log("Error Occured" + err);
         } 
     })
 }
@@ -51,6 +51,8 @@ if(product.productid == "" || product.productname == "" || product.categoryid ==
 //displaying data
 
 Router.get('/list', (req, res) => {
+
+    let user = Product.find();
 
     Product.find((err, docs) => {
         if(!err){
@@ -71,6 +73,7 @@ Router.get('/:id', (req, res) => {
             })
         }
     })
+    .lean()
 })
 
 Router.get('/delete/:id', (req, res) => {
@@ -90,12 +93,38 @@ function updateRecord(req, res){
             res.redirect('product/list');
         }
         else{
-            res.render('product/addoredit', ({
-                viewTitle: 'Update Product',
-                product: req. body
-            }))
+            if(err.name == "validationError"){
+                handlevalidationError(err,req.body);
+                res.render('product/addoredit', ({
+                    viewTitle: 'Update Product',
+                    product: req.body
+                }))
+            }
+            else{
+                console.log("Error occured during updating record" + err);
+            }
         }
     })
 }
+
+Router.get('/list/:page', (req, res, next) => {
+    let perPage = 9;
+    let page = req.params.page || 1;
+  
+    Product
+      .find({}) // finding all documents
+      .skip((perPage * page) - perPage) // in the first page the value of the skip is 0
+      .limit(perPage) // output just 9 items
+      .exec((err, products) => {
+        Product.count((err, count) => { // count to calculate the number of pages
+          if (err) return next(err);
+          res.render('products/products', {
+            products,
+            current: page,
+            pages: Math.ceil(count / perPage)
+          });
+        });
+      });
+  });
 
 module.exports = Router;
